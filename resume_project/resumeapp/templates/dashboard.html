@@ -1,0 +1,150 @@
+{% extends 'dashboard_base.html' %}
+
+{% block title %}Dashboard - AI Resume Analyzer{% endblock %}
+
+{% block dashboard_content %}
+<div class="mb-5">
+    <h2 class="fw-bold text-dark mb-1" style="font-family: 'Outfit', sans-serif;">Dashboard</h2>
+</div>
+
+<!-- Premium Statistical Metrics -->
+<div class="row g-4 mb-5">
+    
+    <!-- Metric 1: Resumes Uploaded -->
+    <div class="col-md-6 col-lg-3">
+        <div class="stat-card-premium">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <span class="text-secondary small fw-semibold d-block mb-1">Resumes Uploaded</span>
+                    <h2 class="fw-bold text-dark mb-0">{{ total_uploaded }}</h2>
+                </div>
+                <div class="stat-icon-wrapper">
+                    <i class="fa-solid fa-file-lines"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Metric 2: Jobs Matched (75%+ score) -->
+    <div class="col-md-6 col-lg-3">
+        <div class="stat-card-premium success">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <span class="text-secondary small fw-semibold d-block mb-1">Jobs Matched</span>
+                    <h2 class="fw-bold text-dark mb-0">{{ jobs_matched }}</h2>
+                </div>
+                <div class="stat-icon-wrapper">
+                    <i class="fa-solid fa-briefcase"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Metric 3: Average Score -->
+    <div class="col-md-6 col-lg-3">
+        <div class="stat-card-premium warning">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <span class="text-secondary small fw-semibold d-block mb-1">Average Score</span>
+                    <h2 class="fw-bold text-dark mb-0">{{ average_score }}%</h2>
+                </div>
+                <div class="stat-icon-wrapper">
+                    <i class="fa-solid fa-percent"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Metric 4: Total Analyses (Corrected layout & icon) -->
+    <div class="col-md-6 col-lg-3">
+        <div class="stat-card-premium info">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <span class="text-secondary small fw-semibold d-block mb-1">Total Analyses</span>
+                    <h2 class="fw-bold text-dark mb-0">{{ reports_generated }}</h2>
+                </div>
+                <div class="stat-icon-wrapper">
+                    <i class="fa-solid fa-chart-line"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+</div>
+
+<!-- Recent Analyses Table -->
+<div class="card-premium">
+    <div class="card-premium-header d-flex justify-content-between align-items-center">
+        <h5 class="fw-bold text-dark mb-0">Recent Analyses</h5>
+        <a href="{% url 'history' %}" class="btn btn-link btn-sm text-decoration-none fw-bold text-primary">View All</a>
+    </div>
+    <div class="p-0">
+        <div class="table-responsive">
+            <table class="table table-premium table-hover">
+                <thead>
+                    <tr>
+                        <th>Resume</th>
+                        <th>Best Match</th>
+                        <th>Score</th>
+                        <th>Date</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if recent_analyses %}
+                        {% for analysis in recent_analyses %}
+                            <tr>
+                                <td class="fw-semibold text-dark">
+                                    <i class="fa-solid fa-file-pdf text-danger me-2"></i>
+                                    {{ analysis.resume.file.name|cut:"resumes/" }}
+                                </td>
+                                <td>
+                                    {% if analysis.job_title %}
+                                        <strong>{{ analysis.job_title }}</strong>
+                                    {% else %}
+                                        <span class="text-muted">Generic Match</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <span class="fw-bold {% if analysis.score >= 80 %}text-success{% elif analysis.score >= 50 %}text-warning{% else %}text-danger{% endif %}">
+                                            {{ analysis.score }}%
+                                        </span>
+                                        <div class="progress progress-premium" style="width: 80px;">
+                                            <div class="progress-bar progress-premium-bar {% if analysis.score >= 80 %}bg-success{% elif analysis.score >= 50 %}bg-warning{% else %}bg-danger{% endif %}" 
+                                                 role="progressbar" 
+                                                 style="width: {{ analysis.score }}%" 
+                                                 aria-valuenow="{{ analysis.score }}" 
+                                                 aria-valuemin="0" 
+                                                 aria-valuemax="100">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="text-muted">{{ analysis.created_at|date:"d M Y" }}</td>
+                                <td class="text-end">
+                                    <div class="d-flex justify-content-end gap-2">
+                                        <a href="{% url 'result' analysis.id %}" class="btn btn-light btn-premium-sm text-primary">
+                                            <i class="fa-solid fa-eye me-1"></i> View
+                                        </a>
+                                        <a href="{% url 'download_report' analysis.id %}" class="btn btn-light btn-premium-sm text-secondary px-2">
+                                            <i class="fa-solid fa-download"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="5" class="text-center py-5 text-muted">
+                                <i class="fa-solid fa-folder-open fs-2 mb-3 d-block text-secondary"></i>
+                                No analysis records found. Upload a resume to get started!
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

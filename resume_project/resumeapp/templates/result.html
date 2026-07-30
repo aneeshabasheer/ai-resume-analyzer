@@ -1,0 +1,231 @@
+{% extends 'dashboard_base.html' %}
+{% load static %}
+
+{% block title %}Match Score - AI Resume Analyzer{% endblock %}
+
+{% block extra_head %}
+<!-- Chart.js CDN for visual analytics -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
+
+{% block dashboard_content %}
+<!-- Header area exactly matching Screen 6 -->
+<div class="row align-items-center mb-5">
+    <div class="col-sm-8">
+        <h2 class="fw-bold text-dark mb-1" style="font-family: 'Outfit', sans-serif;">
+            Best Match: {{ analysis.job.title|default:"Python Developer" }}
+        </h2>
+    </div>
+    <div class="col-sm-4 text-sm-end mt-3 mt-sm-0">
+        <a href="{% url 'download_report' analysis.id %}" class="btn btn-pill-primary px-4">
+            Download Report
+        </a>
+    </div>
+</div>
+
+<div class="row g-4 mb-5">
+    <!-- Left Column: Match Score & Skill Gaps (Screen 6) -->
+    <div class="col-lg-6">
+        
+        <!-- Match Score Card -->
+        <div class="card-premium mb-4">
+            <div class="card-premium-header">
+                <h5 class="fw-bold text-dark mb-0">Match Score</h5>
+            </div>
+            <div class="card-premium-body">
+                <div class="d-flex align-items-baseline mb-3">
+                    <h1 class="fw-extrabold text-success display-3 mb-0" style="font-family: 'Outfit', sans-serif; font-weight: 800;">
+                        {{ analysis.score }}%
+                    </h1>
+                </div>
+                <!-- Progress bar matching Screen 6 -->
+                <div class="progress progress-premium mb-2" style="height: 12px;">
+                    <div class="progress-bar {% if analysis.score >= 80 %}bg-success{% elif analysis.score >= 50 %}bg-warning{% else %}bg-danger{% endif %} progress-premium-bar" 
+                         role="progressbar" 
+                         style="width: {{ analysis.score }}%" 
+                         aria-valuenow="{{ analysis.score }}" 
+                         aria-valuemin="0" 
+                         aria-valuemax="100">
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Skills tags matching Screen 6 -->
+        <div class="card-premium">
+            <div class="card-premium-header">
+                <h5 class="fw-bold text-dark mb-0">Skills Analysis</h5>
+            </div>
+            <div class="card-premium-body">
+                
+                <!-- Matched Skills -->
+                <h6 class="fw-bold text-secondary mb-3">Matched Skills</h6>
+                <div class="mb-4">
+                    {% if analysis.matched_skills %}
+                        {% for skill in analysis.matched_skills %}
+                            <span class="tag-badge success me-2 mb-2">{{ skill }}</span>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-muted small">No matched skills found. Try updating your resume.</p>
+                    {% endif %}
+                </div>
+                
+                <!-- Missing Skills -->
+                <h6 class="fw-bold text-secondary mb-3">Missing Skills</h6>
+                <div class="mb-3">
+                    {% if analysis.missing_skills %}
+                        {% for skill in analysis.missing_skills %}
+                            <span class="tag-badge danger me-2 mb-2">{{ skill }}</span>
+                        {% endfor %}
+                    {% else %}
+                        <span class="tag-badge success"><i class="fa-solid fa-circle-check"></i> You have all required skills!</span>
+                    {% endif %}
+                </div>
+                
+            </div>
+        </div>
+        
+    </div>
+
+    <!-- Right Column: Job Comparison Bar Chart (Screen 7) -->
+    <div class="col-lg-6">
+        <div class="card-premium h-100">
+            <div class="card-premium-header">
+                <h5 class="fw-bold text-dark mb-0">Job Match Comparison</h5>
+            </div>
+            <div class="card-premium-body d-flex flex-column justify-content-center" style="min-height: 300px;">
+                <div style="position: relative; height: 260px; width: 100%;">
+                    <canvas id="jobMatchChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Extra Details: Other Matching Jobs in Database -->
+{% if other_analyses %}
+<div class="card-premium">
+    <div class="card-premium-header">
+        <h5 class="fw-bold text-dark mb-0">Analysis Fit for Other Jobs</h5>
+    </div>
+    <div class="p-0">
+        <div class="table-responsive">
+            <table class="table table-premium table-hover">
+                <thead>
+                    <tr>
+                        <th>Job Title</th>
+                        <th>Company</th>
+                        <th>Location</th>
+                        <th>Match Score</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for other in other_analyses %}
+                        <tr>
+                            <td class="fw-bold text-dark">{{ other.job.title }}</td>
+                            <td>{{ other.job.company }}</td>
+                            <td>{{ other.job.location }}</td>
+                            <td>
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="fw-bold {% if other.score >= 80 %}text-success{% elif other.score >= 50 %}text-warning{% else %}text-danger{% endif %}">
+                                        {{ other.score }}%
+                                    </span>
+                                    <div class="progress progress-premium" style="width: 80px;">
+                                        <div class="progress-bar progress-premium-bar {% if other.score >= 80 %}bg-success{% elif other.score >= 50 %}bg-warning{% else %}bg-danger{% endif %}" 
+                                             role="progressbar" 
+                                             style="width: {{ other.score }}%">
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="text-end">
+                                <a href="{% url 'result' other.id %}" class="btn btn-light btn-premium-sm text-primary">
+                                    <i class="fa-solid fa-eye me-1"></i> Switch Result
+                                </a>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Chart.js Configuration exactly matching Screen 7 color & labels -->
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const ctx = document.getElementById('jobMatchChart').getContext('2d');
+        
+        const labels = {{ chart_labels|safe }};
+        const scores = {{ chart_data|safe }};
+        
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Match Percentage',
+                    data: scores,
+                    backgroundColor: [
+                        '#10b981',  // Green (Python Developer)
+                        '#3b82f6',  // Blue (Backend Developer)
+                        '#8b5cf6',  // Purple (Data Analyst)
+                        '#f59e0b'   // Orange (Machine Learning Engineer)
+                    ],
+                    borderRadius: 6,
+                    maxBarThickness: 45
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        grid: {
+                            display: false
+                        },
+                        ticks: {
+                            font: {
+                                family: 'Plus Jakarta Sans',
+                                weight: 600,
+                                size: 11
+                            },
+                            color: '#64748b'
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        max: 100,
+                        ticks: {
+                            callback: function(value) {
+                                return value + "%";
+                            },
+                            font: {
+                                family: 'Plus Jakarta Sans'
+                            },
+                            color: '#64748b'
+                        },
+                        grid: {
+                            color: '#f1f5f9'
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return 'Match Score: ' + context.raw + '%';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}

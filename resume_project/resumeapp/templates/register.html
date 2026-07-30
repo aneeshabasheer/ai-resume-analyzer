@@ -1,0 +1,120 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="auth-wrapper">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-10">
+                <div class="auth-card row g-0">
+                    
+                    <!-- Left Side: Registration Form -->
+                    <div class="col-md-6 auth-form-side">
+                        <div class="mb-4">
+                            <h2 class="fw-bold text-dark" style="font-family: 'Outfit', sans-serif;">Create an Account</h2>
+                        </div>
+                        
+                        <form method="POST" novalidate>
+                            {% csrf_token %}
+                            
+                            <!-- Render Errors if any -->
+                            {% if form.non_field_errors %}
+                                <div class="alert alert-danger p-2 small mb-3">
+                                    {% for error in form.non_field_errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                            
+                            <!-- Username Field -->
+                            <div class="mb-3">
+                                <label for="id_username" class="form-label fw-semibold text-secondary small">Username</label>
+                                <input type="text" name="username" id="id_username" 
+                                       class="form-control form-control-custom {% if form.username.errors %}is-invalid{% endif %}"
+                                       value="{{ form.username.value|default:'' }}" required>
+                                {% if form.username.errors %}
+                                    <div class="invalid-feedback small">
+                                        {{ form.username.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+
+                            <!-- Email Field -->
+                            <div class="mb-3">
+                                <label for="id_email" class="form-label fw-semibold text-secondary small">Email</label>
+                                <input type="email" name="email" id="id_email" 
+                                       class="form-control form-control-custom {% if form.email.errors %}is-invalid{% endif %}"
+                                       value="{{ form.email.value|default:'' }}" required>
+                                {% if form.email.errors %}
+                                    <div class="invalid-feedback small">
+                                        {{ form.email.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+
+                            <!-- Password Field -->
+                            <div class="mb-3">
+                                <label for="id_password1" class="form-label fw-semibold text-secondary small">Password</label>
+                                <input type="password" name="password1" id="id_password1" 
+                                       class="form-control form-control-custom {% if form.password1.errors %}is-invalid{% endif %}" required>
+                                {% if form.password1.errors %}
+                                    <div class="invalid-feedback small">
+                                        {{ form.password1.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+
+                            <!-- Confirm Password Field -->
+                            <div class="mb-4">
+                                <label for="id_password2" class="form-label fw-semibold text-secondary small">Confirm Password</label>
+                                <input type="password" name="password2" id="id_password2" 
+                                       class="form-control form-control-custom {% if form.password2.errors %}is-invalid{% endif %}" required>
+                                {% if form.password2.errors %}
+                                    <div class="invalid-feedback small">
+                                        {{ form.password2.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="d-grid mb-3">
+                                <button type="submit" class="btn btn-pill-primary py-2 fw-bold">Register</button>
+                            </div>
+                        </form>
+                        
+                        <div class="text-center mt-4">
+                            <span class="text-muted small">Already have an account? <a href="{% url 'login' %}" class="text-decoration-none fw-bold text-primary">Login</a></span>
+                        </div>
+                    </div>
+                    
+                    <!-- Right Side: Vector Illustration Panel (Screen 2) -->
+                    <div class="col-md-6 auth-illus-side d-none d-md-flex flex-column align-items-center justify-content-center">
+                        <div class="text-center position-relative">
+                            <!-- Premium AI Illustration -->
+                            <img id="register-illus" src="{% static 'images/register_illustration.jpg' %}" alt="Register Illustration" class="img-fluid rounded-4 shadow-sm" style="max-width: 320px;" onerror="handleRegisterIllusError(this)">
+                            
+                            <!-- Dynamic Fallback SVG/CSS (displayed if static asset is missing) -->
+                            <div id="register-fallback-illus" style="display: none;" class="py-4">
+                                <div class="position-relative d-inline-block">
+                                    <i class="fa-solid fa-user-plus text-white" style="font-size: 8rem; opacity: 0.15;"></i>
+                                    <div class="mt-4 text-white">
+                                        <h4 class="fw-bold mb-2">Join Candidate Portal</h4>
+                                        <p class="small text-white-50" style="max-width: 250px;">Create an account to gain access to detailed resume analysis reports and career recommendation services.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function handleRegisterIllusError(img) {
+        img.style.display = 'none';
+        document.getElementById('register-fallback-illus').style.display = 'block';
+    }
+</script>
+{% endblock %}

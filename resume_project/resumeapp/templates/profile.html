@@ -1,0 +1,249 @@
+{% extends 'dashboard_base.html' %}
+
+<style>
+.profile-pic-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.profile-pic-img {
+    width: 120px;            
+    height: 120px;          
+    object-fit: cover;       
+    border-radius: 50%;      
+    border: 3px solid #0d6efd; 
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.profile-avatar-placeholder {
+    width: 200px;
+    height: 200px;
+    border-radius: 50%;
+    background-color: #0d6efd;
+    color: white;
+    font-size: 48px;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto;
+}
+
+.btn-primary-custom {
+    background-color: #0d6efd !important; 
+    color: #ffffff !important;            
+    border: none !important;
+    border-radius: 6px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.btn-primary-custom:hover {
+    background-color: #0b5ed7 !important; 
+    color: #ffffff !important;
+    box-shadow: 0 4px 8px rgba(13, 110, 253, 0.3);
+}
+
+.custom-input {
+    background-color: #f8fafc !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 8px !important;
+    padding: 10px 14px !important;
+    font-size: 14px !important;
+    color: #334155 !important;
+    transition: all 0.2s ease-in-out;
+}
+
+.custom-input:focus {
+    background-color: #ffffff !important;
+    border-color: #0d6efd !important;
+    box-shadow: 0 0 0 4px rgba(13, 110, 253, 0.1) !important;
+    outline: none !important;
+}
+
+.fs-7 {
+    font-size: 0.8rem !important;
+}
+
+.btn-primary-gradient {
+    background: linear-gradient(135deg, #0d6efd, #0b5ed7) !important;
+    color: #ffffff !important;
+    border: none !important;
+    border-radius: 8px !important;
+    font-size: 15px !important;
+    transition: all 0.3s ease;
+}
+
+.btn-primary-gradient:hover {
+    background: linear-gradient(135deg, #0b5ed7, #0a58ca) !important;
+    box-shadow: 0 6px 15px rgba(13, 110, 253, 0.3) !important;
+    transform: translateY(-1px);
+}
+</style>
+
+{% block dashboard_content %}
+<div class="row align-items-center mb-4">
+    <div class="col">
+        <h2 class="fw-bold text-dark mb-1">User Profile</h2>
+        <p class="text-muted mb-0">View your stats and edit your profile information.</p>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- LEFT SIDEBAR COLUMN: PROFILE STATS OVERVIEW -->
+    <div class="col-lg-4">
+        <div class="card card-custom text-center py-4 shadow-sm border-0 rounded-4">
+            <div class="card-custom-body">
+
+                <!-- Avatar block -->
+                <div class="profile-pic-container mb-3">
+                    {% if user.profile.profile_pic %}
+                        <img src="{{ user.profile.profile_pic.url }}" 
+                             alt="Profile Picture" 
+                             style="width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 3px solid #0d6efd; display: block; margin: 0 auto;">
+                    {% else %}
+                        <div style="width: 120px; height: 120px; border-radius: 50%; background-color: #0d6efd; color: white; font-size: 50px; font-weight: bold; display: flex; align-items: center; justify-content: center; margin: 0 auto; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);">
+                            {{ user.username|slice:":1"|upper }}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <h4 class="fw-bold text-dark mb-1">{{ user.first_name }} {{ user.last_name }}</h4>
+                <p class="text-muted small mb-3">@{{ user.username }}</p>
+                <p class="text-secondary small italic px-3">{{ user.profile.bio|default:"No bio added yet." }}</p>
+                
+                <hr class="text-muted">
+                
+                <div class="row text-center mt-3">
+                    <div class="col-6 border-end">
+                        <span class="text-muted small text-uppercase d-block mb-1">Resumes</span>
+                        <h4 class="fw-bold text-primary mb-0">{{ total_uploaded }}</h4>
+                    </div>
+                    <div class="col-6">
+                        <span class="text-muted small text-uppercase d-block mb-1">Avg Score</span>
+                        <h4 class="fw-bold text-primary mb-0">{{ avg_score }}%</h4>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- RIGHT MAIN COLUMN: PROFILE FIELDS EDIT FORM & DANGER ZONE -->
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm rounded-4 mb-4">
+            <div class="card-body p-4">
+                
+                <div class="d-flex align-items-center mb-4 pb-2 border-bottom">
+                    <i class="fa-solid fa-user-pen text-primary fs-4 me-3"></i>
+                    <div>
+                        <h5 class="fw-bold text-dark mb-0">Edit Account & Profile Details</h5>
+                        <small class="text-muted">Update your personal information and public profile</small>
+                    </div>
+                </div>
+
+                <form method="POST" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    
+                    <!-- Account Section -->
+                    <div class="form-section mb-4">
+                        <h6 class="fw-bold text-primary text-uppercase fs-7 mb-3 tracking-wide">
+                            <i class="fa-solid fa-lock me-1"></i> Account Credentials
+                        </h6>
+                        <div class="row g-3">
+                            {% for field in user_form %}
+                                <div class="col-md-6">
+                                    <label for="{{ field.id_for_label }}" class="form-label fw-semibold text-secondary small">{{ field.label }}</label>
+                                    <input type="{{ field.field.widget.input_type|default:'text' }}" 
+                                           name="{{ field.name }}" 
+                                           id="{{ field.id_for_label }}" 
+                                           class="form-control custom-input {% if field.errors %}is-invalid{% endif %}"
+                                           value="{{ field.value|default:'' }}"
+                                           required>
+                                    {% if field.errors %}
+                                        <div class="invalid-feedback">{{ field.errors|striptags }}</div>
+                                    {% endif %}
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <!-- Profile Section -->
+                    <div class="form-section mb-4">
+                        <h6 class="fw-bold text-primary text-uppercase fs-7 mb-3 tracking-wide">
+                            <i class="fa-solid fa-id-card me-1"></i> Public Profile Details
+                        </h6>
+                        <div class="row g-3">
+                            {% for field in profile_form %}
+                                <div class="col-md-12">
+                                    <label for="{{ field.id_for_label }}" class="form-label fw-semibold text-secondary small">{{ field.label }}</label>
+                                    
+                                    {% if field.name == 'bio' or field.name == 'skills' or field.name == 'education' or field.name == 'experience' %}
+                                        <textarea name="{{ field.name }}" 
+                                                  id="{{ field.id_for_label }}" 
+                                                  class="form-control custom-input {% if field.errors %}is-invalid{% endif %}"
+                                                  rows="3"
+                                                  placeholder="{{ field.field.widget.attrs.placeholder|default:'' }}">{{ field.value|default:'' }}</textarea>
+                                    {% elif field.name == 'profile_pic' %}
+                                        <div class="input-group">
+                                            <input type="file" 
+                                                   name="{{ field.name }}" 
+                                                   id="{{ field.id_for_label }}" 
+                                                   class="form-control custom-input {% if field.errors %}is-invalid{% endif %}"
+                                                   accept="image/*">
+                                        </div>
+                                    {% else %}
+                                        <input type="text" 
+                                               name="{{ field.name }}" 
+                                               id="{{ field.id_for_label }}" 
+                                               class="form-control custom-input {% if field.errors %}is-invalid{% endif %}"
+                                               value="{{ field.value|default:'' }}">
+                                    {% endif %}
+                                    
+                                    {% if field.help_text %}
+                                        <div class="form-text text-muted small mt-1"><i class="fa-solid fa-circle-info me-1"></i>{{ field.help_text }}</div>
+                                    {% endif %}
+                                    {% if field.errors %}
+                                        <div class="invalid-feedback d-block">{{ field.errors|striptags }}</div>
+                                    {% endif %}
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <!-- Submit Button -->
+                    <div class="pt-2">
+                        <button type="submit" 
+                                class="btn fw-bold text-white shadow-sm w-100 py-2" 
+                                style="background-color: #0d6efd !important; border-color: #0d6efd !important;">
+                            <i class="fa-solid fa-floppy-disk me-2"></i> Save Profile Settings
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- DANGER ZONE: DELETE ACCOUNT SECTION -->
+        <div class="card border-danger shadow-sm rounded-4">
+            <div class="card-body p-4">
+                <div class="d-flex align-items-center mb-3">
+                    <i class="fa-solid fa-triangle-exclamation text-danger fs-4 me-3"></i>
+                    <div>
+                        <h5 class="fw-bold text-danger mb-0">Danger Zone</h5>
+                        <small class="text-muted">Permanently remove your account and all associated data</small>
+                    </div>
+                </div>
+                <p class="small text-secondary mb-3">
+                    Once you delete your account, there is no going back. All of your uploaded resumes and match analysis histories will be permanently deleted.
+                </p>
+                <form method="POST" action="{% url 'delete_account' %}" onsubmit="return confirm('Are you sure you want to permanently delete your account? This action cannot be undone!');">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-outline-danger fw-bold">
+                        <i class="fa-solid fa-trash-can me-2"></i> Delete My Account
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

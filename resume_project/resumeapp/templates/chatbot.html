@@ -1,0 +1,321 @@
+{% extends 'dashboard_base.html' %}
+{% load static %}
+
+{% block title %}AI Career Assistant{% endblock %}
+
+{% block extra_head %}
+<style>
+    /* Chat Main Wrapper Box */
+    .chatbot-card {
+        background: #ffffff;
+        border-radius: 16px;
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
+        display: flex;
+        flex-direction: column;
+        height: 580px;
+        max-width: 900px;
+        margin: 0 auto;
+        overflow: hidden;
+    }
+
+    /* Message Display Area */
+    .chatbot-messages {
+        flex: 1;
+        padding: 24px;
+        overflow-y: auto;
+        background-color: #f8fafc;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    /* Chat Rows Alignment */
+    .chat-row {
+        display: flex !important;
+        align-items: flex-start !important;
+        gap: 12px;
+        width: 100% !important;
+        margin: 0 !important;
+    }
+
+    /* User Row - Force Right Alignment */
+    .chat-row.user-row {
+        justify-content: flex-end !important;
+        margin-left: auto !important;
+    }
+
+    /* Bot Row - Force Left Alignment */
+    .chat-row.bot-row {
+        justify-content: flex-start !important;
+        margin-right: auto !important;
+    }
+
+    /* Avatars Styling */
+    .chat-avatar {
+        width: 38px;
+        height: 38px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.95rem;
+        flex-shrink: 0;
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        overflow: hidden;
+        background-color: #ffffff;
+    }
+
+    .chat-avatar img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .user-avatar-icon {
+        background-color: #2563eb;
+        color: white;
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .bot-avatar-icon {
+        background-color: #0f172a;
+        color: white;
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* Chat Bubbles */
+    .chat-bubble {
+        max-width: 70% !important;
+        padding: 12px 18px !important;
+        font-size: 0.95rem;
+        line-height: 1.5;
+        word-wrap: break-word;
+        white-space: pre-wrap; /* Preserve line breaks in standard text and AJAX */
+    }
+
+    /* User Bubble (Blue - Right) */
+    .chat-bubble.user {
+        background-color: #2563eb !important;
+        color: #ffffff !important;
+        border-radius: 18px 18px 2px 18px !important;
+        text-align: left;
+    }
+
+    /* Bot Bubble (White - Left) */
+    .chat-bubble.bot {
+        background-color: #ffffff !important;
+        color: #1e293b !important;
+        border: 1px solid #e2e8f0 !important;
+        border-radius: 18px 18px 18px 2px !important;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.02) !important;
+    }
+
+    /* Input Footer Panel */
+    .chatbot-input-area {
+        padding: 16px 20px;
+        background: #ffffff;
+        border-top: 1px solid #e2e8f0;
+    }
+
+    .chat-input {
+        border: 1px solid #cbd5e1;
+        border-radius: 8px;
+        padding: 10px 16px;
+        font-size: 0.95rem;
+    }
+
+    .btn-send {
+        background-color: #2563eb;
+        color: white;
+        border-radius: 8px;
+        font-weight: 600;
+        padding: 10px 24px;
+        border: none;
+    }
+
+    .btn-send:hover {
+        background-color: #1d4ed8;
+        color: white;
+    }
+</style>
+{% endblock %}
+
+{% block dashboard_content %}
+<div class="d-flex justify-content-between align-items-center mb-4 mx-auto" style="max-width: 900px;">
+    <div>
+        <h3 class="fw-bold text-dark mb-0">AI Career Assistant</h3>
+        <p class="text-muted small mb-0">Ask anything about your career or resume</p>
+    </div>
+    <button type="button" class="btn btn-outline-danger btn-sm px-3" onclick="clearChat()">
+        <i class="fa-solid fa-trash me-1"></i> Clear Chat
+    </button>
+</div>
+
+<!-- Main Chat Container -->
+<div class="chatbot-card">
+    
+    <!-- Messages Display Container -->
+    <div class="chatbot-messages" id="chat-container">
+        
+        {% if not chats %}
+            <div class="chat-row bot-row">
+                <div class="chat-avatar">
+                    <div class="bot-avatar-icon"><i class="fa-solid fa-robot"></i></div>
+                </div>
+                <div class="chat-bubble bot">Hello! How can I assist you with your career or resume today?</div>
+            </div>
+        {% endif %}
+
+        {% for chat in chats %}
+            <!-- User Message (Right Side) -->
+            <div class="chat-row user-row">
+                <div class="chat-bubble user">{{ chat.message }}</div>
+                <div class="chat-avatar">
+                    {% if request.user.profile.image %}
+                        <img src="{{ request.user.profile.image.url }}" alt="User">
+                    {% else %}
+                        <div class="user-avatar-icon"><i class="fa-solid fa-user"></i></div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Bot Message (Left Side) -->
+            <div class="chat-row bot-row">
+                <div class="chat-avatar">
+                    <div class="bot-avatar-icon"><i class="fa-solid fa-robot"></i></div>
+                </div>
+                <div class="chat-bubble bot">{{ chat.response }}</div>
+            </div>
+        {% endfor %}
+
+    </div>
+
+    <!-- Input Form -->
+    <div class="chatbot-input-area">
+        <form id="chat-form" method="POST">
+            {% csrf_token %}
+            <div class="input-group gap-2">
+                <input type="text" id="chat-input" class="form-control chat-input" placeholder="Type your message..." required autocomplete="off">
+                <button class="btn btn-send" type="submit">Send</button>
+            </div>
+        </form>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Get User Profile Image URL dynamically
+    const userImgUrl = "{% if request.user.profile.image %}{{ request.user.profile.image.url }}{% endif %}";
+
+    // Helper functions for building Avatar HTML cleanly in JavaScript
+    function getUserAvatarHTML() {
+        if (userImgUrl) {
+            return `<div class="chat-avatar"><img src="${userImgUrl}" alt="User"></div>`;
+        } else {
+            return `<div class="chat-avatar"><div class="user-avatar-icon"><i class="fa-solid fa-user"></i></div></div>`;
+        }
+    }
+
+    function getBotAvatarHTML() {
+        return `<div class="chat-avatar"><div class="bot-avatar-icon"><i class="fa-solid fa-robot"></i></div></div>`;
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const chatForm = document.getElementById('chat-form');
+        const chatInput = document.getElementById('chat-input');
+        const chatContainer = document.getElementById('chat-container');
+
+        if(chatContainer) {
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        if (chatForm) {
+            chatForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                const msg = chatInput.value.trim();
+                if (!msg) return;
+
+                // 1. Append User Message (Right Aligned + User Avatar)
+                const userRow = document.createElement('div');
+                userRow.className = 'chat-row user-row';
+                userRow.innerHTML = `<div class="chat-bubble user">${escapeHtml(msg)}</div>` + getUserAvatarHTML();
+                chatContainer.appendChild(userRow);
+
+                chatInput.value = '';
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+
+                // 2. Append Loading Placeholder
+                const loadingId = 'loading-' + Date.now();
+                const loadingRow = document.createElement('div');
+                loadingRow.id = loadingId;
+                loadingRow.className = 'chat-row bot-row';
+                loadingRow.innerHTML = getBotAvatarHTML() + `
+                    <div class="chat-bubble bot text-muted">
+                        <span class="spinner-border spinner-border-sm me-1" role="status"></span> Thinking...
+                    </div>
+                `;
+                chatContainer.appendChild(loadingRow);
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+
+                // 3. AJAX Request
+                const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+                const formData = new FormData();
+                formData.append('message', msg);
+                formData.append('csrfmiddlewaretoken', csrfToken);
+
+                fetch('/chatbot/', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(res => res.json())
+                .then(data => {
+                    document.getElementById(loadingId)?.remove();
+                    if (data.response) {
+                        const botRow = document.createElement('div');
+                        botRow.className = 'chat-row bot-row';
+                        botRow.innerHTML = getBotAvatarHTML() + `<div class="chat-bubble bot">${data.response}</div>`;
+                        chatContainer.appendChild(botRow);
+                    }
+                    chatContainer.scrollTop = chatContainer.scrollHeight;
+                })
+                .catch(err => {
+                    document.getElementById(loadingId)?.remove();
+                    console.error(err);
+                });
+            });
+        }
+
+        function escapeHtml(text) {
+            return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        }
+    });
+
+    function clearChat() {
+        if (confirm("Clear all chat history?")) {
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+            fetch('/clear-chat/', {
+                method: 'POST',
+                headers: { 'X-CSRFToken': csrfToken }
+            })
+            .then(res => res.json())
+            .then(data => {
+                if(data.status === 'success') {
+                    location.reload();
+                }
+            });
+        }
+    }
+</script>
+{% endblock %}

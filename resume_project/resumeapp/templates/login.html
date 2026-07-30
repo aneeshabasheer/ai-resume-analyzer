@@ -1,0 +1,108 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="auth-wrapper">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-10">
+                <div class="auth-card row g-0">
+                    
+                    <!-- Left Side: Login Form -->
+                    <div class="col-md-6 auth-form-side">
+                        <div class="mb-4">
+                            <h2 class="fw-bold text-dark" style="font-family: 'Outfit', sans-serif;">Welcome Back</h2>
+                            <p class="text-secondary small">Login to your account</p>
+                        </div>
+                        
+                        <form method="POST" novalidate>
+                            {% csrf_token %}
+                            
+                            <!-- Render Errors if any -->
+                            {% if form.non_field_errors %}
+                                <div class="alert alert-danger p-2 small mb-3">
+                                    {% for error in form.non_field_errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                            
+                            <!-- Username Field -->
+                            <div class="mb-3">
+                                <label for="id_username" class="form-label fw-semibold text-secondary small">Username</label>
+                                <input type="text" name="username" id="id_username" 
+                                       class="form-control form-control-custom {% if form.username.errors %}is-invalid{% endif %}"
+                                       value="{{ form.username.value|default:'' }}" required>
+                                {% if form.username.errors %}
+                                    <div class="invalid-feedback small">
+                                        {{ form.username.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+
+                            <!-- Password Field -->
+                            <div class="mb-3">
+                                <label for="id_password" class="form-label fw-semibold text-secondary small">Password</label>
+                                <input type="password" name="password" id="id_password" 
+                                       class="form-control form-control-custom {% if form.password.errors %}is-invalid{% endif %}" required>
+                                {% if form.password.errors %}
+                                    <div class="invalid-feedback small">
+                                        {{ form.password.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <!-- Remember me & Forget Password (exactly matching Screen 3) -->
+                            <div class="d-flex align-items-center justify-content-between mb-4">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="remember_me" id="remember_me">
+                                    <label class="form-check-label text-secondary small" for="remember_me">
+                                        Remember me
+                                    </label>
+                                </div>
+                                <a href="{% url 'password_reset' %}" class="text-muted small">Forgot Password?</a>
+                            </div>
+                            
+                            <div class="d-grid mb-3">
+                                <button type="submit" class="btn btn-pill-primary py-2 fw-bold">Login</button>
+                            </div>
+                        </form>
+                        
+                        <div class="text-center mt-4">
+                            <span class="text-muted small">Don't have an account? <a href="{% url 'register' %}" class="text-decoration-none fw-bold text-primary">Register</a></span>
+                        </div>
+                    </div>
+                    
+                    <!-- Right Side: Security Illustration Panel (Screen 3) -->
+                    <div class="col-md-6 auth-illus-side d-none d-md-flex flex-column align-items-center justify-content-center">
+                        <div class="text-center position-relative">
+                            <!-- Premium Security Illustration -->
+                            <img id="login-illus" src="{% static 'images/login_illustration.jpg' %}" alt="Login Security Illustration" class="img-fluid rounded-4 shadow-sm" style="max-width: 320px;" onerror="handleLoginIllusError(this)">
+                            
+                            <!-- Dynamic Fallback SVG/CSS (displayed if static asset is missing) -->
+                            <div id="login-fallback-illus" style="display: none;" class="py-4">
+                                <div class="position-relative d-inline-block">
+                                    <i class="fa-solid fa-shield-halved text-white" style="font-size: 8rem; opacity: 0.15;"></i>
+                                    <div class="mt-4 text-white">
+                                        <h4 class="fw-bold mb-2">Secure Gateway</h4>
+                                        <p class="small text-white-50" style="max-width: 250px;">Sign in securely to manage your resumes, verify matching indexes, and explore skill training options with the chatbot.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function handleLoginIllusError(img) {
+        img.style.display = 'none';
+        document.getElementById('login-fallback-illus').style.display = 'block';
+    }
+</script>
+{% endblock %}
+
