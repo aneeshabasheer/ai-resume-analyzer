@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-$lf8ci)4=tvcrt7=v3+3*+3a(&+rekglnds-($*nxs6(kndi52
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['ai-resume-analyzer-7j49.onrender.com', 'localhost', '127.0.0.1', '*']
 
 
 # Application definition
@@ -78,7 +78,6 @@ WSGI_APPLICATION = 'resume_project.wsgi.application'
 
 import dj_database_url
 import os
-
 DATABASES = {
     'default': dj_database_url.config(
         default=os.getenv('DATABASE_URL', 'postgres://postgres:root@localhost:5433/resume_analyzer_db'),
