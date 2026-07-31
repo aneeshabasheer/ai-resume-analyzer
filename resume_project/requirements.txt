@@ -19,3 +19,4 @@ click
 djangorestframework
 groq
 python-dotenv
+pypdf
