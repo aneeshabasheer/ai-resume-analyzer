@@ -76,16 +76,16 @@ WSGI_APPLICATION = 'resume_project.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
+import dj_database_url
+import os
+
 DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.postgresql',
-            'NAME': 'resume_analyzer_db',
-            'USER': 'postgres',
-            'PASSWORD': 'root', # Change to your PostgreSQL password
-            'HOST': 'localhost',
-            'PORT': '5433',
-        }
-    }
+    'default': dj_database_url.config(
+        default=os.getenv('DATABASE_URL', 'postgres://postgres:root@localhost:5433/resume_analyzer_db'),
+        conn_max_age=600,
+        conn_health_checks=True,
+    )
+}
 
 
 # Password validation
