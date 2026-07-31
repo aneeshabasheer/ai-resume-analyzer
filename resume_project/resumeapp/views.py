@@ -475,7 +475,7 @@ def analyze_jd_view(request):
             user_resume = user_resumes.last()
 
         if job_description and user_resume:
-            # 1. Target Skills Pattern
+            # 1. Targeted Skills Regex Patterns
             TARGET_CATEGORIES = {
                 'Python': r'\bpython\b',
                 'Django': r'\bdjango\b',
@@ -491,47 +491,45 @@ def analyze_jd_view(request):
                 'Git': r'\bgit\b|\bgithub\b|\bgitlab\b',
                 'AWS': r'\baws\b|\bcloud\b',
                 'OOPs': r'\boops\b|\bobject\s*oriented\b',
-                'B.Tech': r'\bb\.?tech\b|\bbachelor\s+of\s+technology\b',
-                'M.Tech': r'\bm\.?tech\b|\bmaster\s+of\s+technology\b',
+                'B.Tech': r'\bb\.?tech\b|\bbachelor',
+                'M.Tech': r'\bm\.?tech\b|\bmaster',
                 'BCA': r'\bbca\b',
                 'MCA': r'\bmca\b',
-                'Degree': r'\bdegree\b',
-                'Developer': r'\bdeveloper\b|\bengineer\b',
-                'Communication': r'\bcommunication\b|\bverbal\b|\bwritten\b',
+                'Communication': r'\bcommunication\b',
                 'Teamwork': r'\bteamwork\b|\bcollaboration\b',
                 'Problem Solving': r'\bproblem\s*solving\b'
             }
 
-            # 2. Extract Text from Resume
+            # 2. Extract Text from Resume reliably
             resume_text = ""
-            if user_resume.raw_text:
+            if user_resume.raw_text and len(user_resume.raw_text.strip()) > 20:
                 resume_text = str(user_resume.raw_text).lower()
             elif user_resume.file:
                 try:
                     reader = PdfReader(user_resume.file.path)
                     for page in reader.pages:
-                        resume_text += page.extract_text() or ""
+                        extracted = page.extract_text()
+                        if extracted:
+                            resume_text += " " + extracted
                     resume_text = resume_text.lower()
                 except Exception as e:
                     print("PDF Reading Error:", e)
 
             jd_text_lower = job_description.lower()
 
-            # 3. Categorize Skills
+            # 3. Categorize Skills Safely
             extracted_skills = []  
             matched_keywords = []  
             missing_keywords = []  
             jd_keywords_found = [] 
 
             for display_name, pattern in TARGET_CATEGORIES.items():
-                in_resume = bool(resume_text and re.search(pattern, resume_text))
-                in_jd = bool(re.search(pattern, jd_text_lower))
+                in_resume = bool(resume_text and re.search(pattern, resume_text, re.IGNORECASE))
+                in_jd = bool(re.search(pattern, jd_text_lower, re.IGNORECASE))
 
-               
                 if in_resume:
                     extracted_skills.append(display_name)
 
-                
                 if in_jd:
                     jd_keywords_found.append(display_name)
                     if in_resume:
@@ -539,32 +537,38 @@ def analyze_jd_view(request):
                     else:
                         missing_keywords.append(display_name)
 
-            # 4. Score Calculation Logic
+            # 4. Fallback: Direct word/string check if regex misses
+            if not matched_keywords and resume_text:
+                for skill in jd_keywords_found:
+                    if skill.lower() in resume_text:
+                        matched_keywords.append(skill)
+                        if skill in missing_keywords:
+                            missing_keywords.remove(skill)
+
+            # 5. Dynamic Score Calculation
             total_found = len(jd_keywords_found)
             total_matched = len(matched_keywords)
 
             if total_found > 0:
                 calc_percentage = (total_matched / total_found) * 100
-                if calc_percentage == 0:
-                    match_score = 15
-                else:
-                    match_score = int(min(max(calc_percentage, 20), 95))
+                match_score = int(np.clip(calc_percentage, 15, 95)) if total_matched > 0 else 15
             else:
+                # Text similarity fallback if no specific keywords matched
                 jd_words = set(re.findall(r'\w{3,}', jd_text_lower))
                 resume_words = set(re.findall(r'\w{3,}', resume_text))
                 common_words = jd_words.intersection(resume_words)
                 
                 if jd_words:
                     word_ratio = (len(common_words) / len(jd_words)) * 100
-                    match_score = int(min(max(word_ratio * 1.5, 25), 88))
+                    match_score = int(np.clip(word_ratio * 1.5, 20, 85))
                 else:
-                    match_score = 45
+                    match_score = 40
 
             formatted_extracted = list(set(extracted_skills))
             formatted_matched = list(set(matched_keywords))
             formatted_missing = list(set(missing_keywords))
 
-            # 5. Save Analysis to Database
+            # 6. Save Analysis to Database
             analysis = ResumeAnalysis.objects.create(
                 resume=user_resume,
                 job_title=job_title,

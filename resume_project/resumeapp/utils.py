@@ -23,26 +23,38 @@ def calculate_match(resume_text, resume_skills, job_description, required_skills
         matched_skills (list)
         missing_skills (list)
     """
-    # 1. Skill Overlap Matching
+    # 1. Clean and normalize skill lists
     job_skills = clean_skills_list(required_skills) if required_skills else []
-    resume_skills_lower = [s.lower() for s in resume_skills]
+    resume_skills_cleaned = clean_skills_list(resume_skills)
 
-    matched_skills = []
-    missing_skills = []
+    # Convert to sets for exact/partial matching
+    resume_skills_set = set(resume_skills_cleaned)
+    matched_skills_set = set()
+    missing_skills_set = set()
 
+    # 2. Skill Overlap Matching
     for js in job_skills:
-        if any(js in rs or rs in js for rs in resume_skills_lower):
-            matching_original = next((rs for rs in resume_skills if js in rs.lower() or rs.lower() in js), js)
-            matched_skills.append(matching_original)
-        else:
-            missing_skills.append(js)
+        # Check direct match or substring match
+        is_matched = False
+        for rs in resume_skills_cleaned:
+            if js == rs or js in rs or rs in js:
+                matching_original = next((orig for orig in resume_skills if orig.lower() == rs), js.title())
+                matched_skills_set.add(matching_original)
+                is_matched = True
+                break
+        
+        if not is_matched:
+            missing_skills_set.add(js.title())
+
+    matched_skills = list(matched_skills_set)
+    missing_skills = list(missing_skills_set)
 
     if job_skills:
         skill_overlap_score = len(matched_skills) / len(job_skills)
     else:
         skill_overlap_score = 0.5  # Default fallback if explicit skills aren't listed
 
-    # 2. Text Cosine Similarity using TF-IDF
+    # 3. Text Cosine Similarity using TF-IDF
     if not resume_text or not job_description:
         cosine_score = 0.0
     else:
@@ -54,11 +66,10 @@ def calculate_match(resume_text, resume_skills, job_description, required_skills
             print(f"Error calculating Cosine Similarity: {e}")
             cosine_score = 0.0
 
-    # 3. Hybrid Scoring Model (60% Skill Overlap + 40% Text Cosine Similarity)
+    # 4. Hybrid Scoring Model (60% Skill Overlap + 40% Text Cosine Similarity)
     if job_skills:
         hybrid_score = (skill_overlap_score * 0.6) + (cosine_score * 0.4)
     else:
-        # If no explicit skill list provided, rely purely on TF-IDF Cosine similarity
         hybrid_score = cosine_score
 
     final_score = int(np.clip(hybrid_score * 100, 0, 100))
