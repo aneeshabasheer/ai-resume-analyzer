@@ -1,93 +1,234 @@
 {% extends 'dashboard_base.html' %}
-{% load static %}
 
 {% block title %}Upload Resume - AI Resume Analyzer{% endblock %}
 
 {% block dashboard_content %}
-<div class="mb-5">
-    <h2 class="fw-bold text-dark mb-1" style="font-family: 'Outfit', sans-serif;">Upload Your Resume</h2>
-</div>
+<style>
+    /* Premium Card Styles */
+    .card-premium {
+        background: #ffffff;
+        border-radius: 16px;
+        border: 1px solid #eef2f6;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04);
+        transition: all 0.3s ease;
+    }
 
-<div class="row justify-content-center">
-    <div class="col-lg-10">
-        <div class="card-premium">
-            <div class="card-premium-body">
-                <div class="row align-items-center">
+    .card-premium:hover {
+        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.07);
+    }
+
+    /* Form Controls */
+    .form-control-custom {
+        border-radius: 10px;
+        padding: 12px 16px;
+        border: 1px solid #e2e8f0;
+        font-size: 0.95rem;
+        transition: all 0.2s ease;
+    }
+
+    .form-control-custom:focus {
+        border-color: #4f46e5;
+        box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1);
+    }
+
+    /* Table Styling */
+    .table thead th {
+        background-color: #f8fafc;
+        color: #64748b;
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.6px;
+        font-weight: 700;
+        border-bottom: 1px solid #e2e8f0;
+        padding-top: 14px;
+        padding-bottom: 14px;
+    }
+
+    .table tbody tr {
+        transition: background-color 0.2s ease;
+    }
+
+    .table tbody tr:hover {
+        background-color: #f8fafc;
+    }
+
+    .table tbody td {
+        padding-top: 16px;
+        padding-bottom: 16px;
+        border-bottom: 1px solid #f1f5f9;
+    }
+
+    /* Delete Button Hover Effect */
+    .btn-outline-danger {
+        border-color: #fca5a5;
+        color: #ef4444;
+        transition: all 0.2s ease;
+    }
+
+    .btn-outline-danger:hover {
+        background-color: #ef4444;
+        border-color: #ef4444;
+        color: #ffffff;
+        box-shadow: 0 4px 12px rgba(239, 68, 68, 0.25);
+        transform: translateY(-1px);
+    }
+
+    /* Primary Button */
+    .btn-pill-primary {
+        background-color: #4f46e5;
+        color: #ffffff;
+        border-radius: 10px;
+        padding: 10px 24px;
+        border: none;
+        transition: all 0.2s ease;
+    }
+
+    .btn-pill-primary:hover {
+        background-color: #4338ca;
+        color: #ffffff;
+        box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+        transform: translateY(-1px);
+    }
+
+    .bg-primary-light {
+        background-color: #eef2ff;
+    }
+</style>
+
+<div class="container-fluid py-4">
+    <!-- Header Section -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="fw-bold mb-1" style="color: #0f172a;">Upload Resume</h3>
+            <p class="text-muted small mb-0">Upload your PDF or DOCX resume to start analyzing with Job Descriptions.</p>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Upload Form Section -->
+        <div class="col-lg-5">
+            <div class="card card-premium p-4">
+                <h5 class="fw-bold mb-3" style="color: #1e293b;">
+                    <i class="bi bi-cloud-arrow-up text-primary me-2"></i>Upload New Resume
+                </h5>
+
+                <form method="POST" enctype="multipart/form-data">
+                    {% csrf_token %}
                     
-                    <!-- Left Column: Upload Form -->
-                    <div class="col-md-7 mb-4 mb-md-0 pr-md-5">
-                        <form method="POST" enctype="multipart/form-data" id="uploadForm" novalidate>
-                            {% csrf_token %}
-                            
-                            <!-- Resume Name input matching Screen 5 -->
-                            <div class="mb-4">
-                                <label for="resume_name" class="form-label fw-semibold text-secondary small">Resume Name</label>
-                                <input type="text" name="resume_name" id="resume_name" class="form-control form-control-custom" placeholder="John Resume" value="{{ user.first_name|default:user.username }} Resume">
+                    <!-- Resume Title Field -->
+                    <div class="mb-3">
+                        <label for="{{ form.title.id_for_label }}" class="form-label fw-semibold text-dark">Resume Title *</label>
+                        {{ form.title }}
+                        {% if form.title.errors %}
+                            <div class="text-danger small mt-1">
+                                {{ form.title.errors }}
                             </div>
-                            
-                            <!-- File input matching Screen 5 -->
-                            <div class="mb-4">
-                                <label for="{{ form.file.id_for_label }}" class="form-label fw-semibold text-secondary small">Upload File</label>
-                                <input type="file" 
-                                       name="{{ form.file.name }}" 
-                                       id="{{ form.file.id_for_label }}" 
-                                       class="form-control form-control-custom {% if form.file.errors %}is-invalid{% endif %}"
-                                       accept=".pdf,.docx"
-                                       required>
-                                <div class="form-text text-muted small mt-2">
-                                    Supported formats: PDF, DOCX
-                                </div>
-                                {% if form.file.errors %}
-                                    <div class="invalid-feedback small">
-                                        {{ form.file.errors.0 }}
-                                    </div>
-                                {% endif %}
-                            </div>
-                            
-                            <!-- Loading Spinner -->
-                            <div id="spinnerContainer" class="d-none text-center mb-4 p-3 bg-light rounded border">
-                                <div class="spinner-border text-primary" role="status">
-                                    <span class="visually-hidden">Loading...</span>
-                                </div>
-                                <h6 class="fw-bold text-primary mt-2 mb-1">Analyzing Resume...</h6>
-                                <p class="text-muted small mb-0">spaCy NLP model is extracting details & matching requirements.</p>
-                            </div>
-                            
-                            <div class="d-grid mt-4">
-                                <button type="submit" id="submitButton" class="btn btn-pill-primary py-2 fw-bold">
-                                    Upload & Analyze
-                                </button>
-                            </div>
-                        </form>
+                        {% endif %}
                     </div>
-                    
-                    <!-- Right Column: Visual Upload Illustration matching Screen 5 -->
-                    <div class="col-md-5 text-center">
-                        <div class="d-inline-flex align-items-center justify-content-center bg-primary-light rounded-circle p-4 mb-3" style="width: 140px; height: 140px;">
-                            <i class="fa-solid fa-cloud-arrow-up text-primary" style="font-size: 4rem;"></i>
+
+                    <!-- Select Resume File Field -->
+                    <div class="mb-3">
+                        <label for="{{ form.file.id_for_label }}" class="form-label fw-semibold text-dark">Select Resume File *</label>
+                        {{ form.file }}
+                        {% if form.file.errors %}
+                            <div class="text-danger small mt-1">
+                                {{ form.file.errors }}
+                            </div>
+                        {% endif %}
+                        <div class="form-text text-muted small mt-2">
+                            Supported Formats: <strong>PDF, DOCX</strong> (Max size: 5MB)
                         </div>
-                        <h5 class="fw-bold text-dark">Analyze instantly with AI</h5>
-                        <p class="text-muted small px-3">Upload your career profile to calculate matching indexes, identify skills gaps, and unlock career recommendations.</p>
                     </div>
-                    
+
+                    <div class="d-grid mt-4">
+                        <button type="submit" class="btn btn-pill-primary fw-bold">
+                            <i class="bi bi-upload me-2"></i>Upload & Parse
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Resumes List Section -->
+        <div class="col-lg-7">
+            <div class="card card-premium p-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="fw-bold mb-0" style="color: #1e293b;">
+                        <i class="bi bi-folder2-open text-primary me-2"></i>Your Resumes
+                    </h5>
+                    <span class="badge bg-primary-light text-primary rounded-pill px-3 py-2 fw-semibold">
+                        Total: {{ user_resumes|length }}
+                    </span>
                 </div>
+
+                {% if user_resumes %}
+                    <div class="table-responsive">
+                        <table class="table align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Title</th>
+                                    <th>File Name</th>
+                                    <th>Uploaded Date</th>
+                                    <th class="text-end">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for resume in user_resumes %}
+                                    <tr>
+                                        <td class="fw-bold text-muted">{{ forloop.counter }}</td>
+                                        <td>
+                                            <span class="fw-semibold text-dark">
+                                                {% if resume.title %}
+                                                    {{ resume.title }}
+                                                {% else %}
+                                                    Untitled Resume
+                                                {% endif %}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <i class="bi bi-file-earmark-pdf fs-5 text-danger me-2"></i>
+                                                <span class="text-muted small">
+                                                    {% if resume.file %}
+                                                        {{ resume.file.name|slice:"8:" }}
+                                                    {% else %}
+                                                        Resume #{{ resume.id }}
+                                                    {% endif %}
+                                                </span>
+                                            </div>
+                                        </td>
+                                        <td class="text-muted small">
+                                            {% if resume.uploaded_at %}
+                                                {{ resume.uploaded_at|date:"d M Y, h:i A" }}
+                                            {% elif resume.created_at %}
+                                                {{ resume.created_at|date:"d M Y, h:i A" }}
+                                            {% else %}
+                                                N/A
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-end">
+                                            <form method="POST" action="{% url 'delete_resume' resume.id %}" onsubmit="return confirm('Are you sure you want to delete this resume? This will permanently remove it from database!');" class="d-inline">
+                                                {% csrf_token %}
+                                                <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill px-3">
+                                                    <i class="bi bi-trash me-1"></i>Delete
+                                                </button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-5">
+                        <i class="bi bi-file-earmark-x text-muted display-4 mb-3 d-block"></i>
+                        <h6 class="text-muted fw-normal">No resumes uploaded yet.</h6>
+                        <p class="small text-muted mb-0">Upload your first resume using the form to get started!</p>
+                    </div>
+                {% endif %}
             </div>
         </div>
     </div>
 </div>
-
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const uploadForm = document.getElementById('uploadForm');
-        const spinnerContainer = document.getElementById('spinnerContainer');
-        const submitButton = document.getElementById('submitButton');
-        
-        if (uploadForm && spinnerContainer && submitButton) {
-            uploadForm.addEventListener('submit', function() {
-                submitButton.disabled = true;
-                spinnerContainer.classList.remove('d-none');
-            });
-        }
-    });
-</script>
 {% endblock %}

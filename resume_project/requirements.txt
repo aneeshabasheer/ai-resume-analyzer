@@ -11,7 +11,7 @@ gunicorn>=21.2.0
 whitenoise>=6.5.0
 dj-database-url>=2.1.0
 
-# Cloudinary cloud storage service for storing media files permanently
+# Cloudinary Storage
 cloudinary>=1.36.0
 django-cloudinary-storage>=0.3.0
 
@@ -20,3 +20,6 @@ djangorestframework
 groq
 python-dotenv
 pypdf
+
+# Direct link to download spaCy English model in cloud servers (e.g., Render/Heroku)
+https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl

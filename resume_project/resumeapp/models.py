@@ -35,6 +35,7 @@ def save_user_profile(sender, instance, **kwargs):
 # Stores uploaded resume metadata and extracted raw text.
 class Resume(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='resumes')
+    title = models.CharField(max_length=200, default="My Resume")
     file = models.FileField(upload_to='resumes/')
     uploaded_at = models.DateTimeField(auto_now_add=True)
     raw_text = models.TextField(blank=True, null=True)

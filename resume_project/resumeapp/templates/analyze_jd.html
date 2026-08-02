@@ -2,11 +2,12 @@
 
 {% block dashboard_content %}
 <div class="container-fluid py-3">
+    <!-- Form Card -->
     <div class="card border-0 shadow-sm p-4 mb-4" style="border-radius: 12px; background: #ffffff;">
         <h3 class="fw-bold text-primary mb-2" style="font-family: 'Outfit', sans-serif;">
-            <i class="fa-solid fa-briefcase me-2"></i>Custom Job Matcher
+            <i class="fa-solid fa-wand-magic-sparkles me-2"></i>Custom Job Matcher
         </h3>
-        <p class="text-muted">
+        <p class="text-muted mb-4">
             Paste the job description from LinkedIn, Indeed, or other job portals here and check if your resume is a good fit for it!
         </p>
 
@@ -15,24 +16,44 @@
             
             <!-- 1. Job Title Field -->
             <div class="mb-3">
-                <label class="form-label fw-bold">Job Title (Optional)</label>
+                <label class="form-label fw-semibold text-dark">
+                    <i class="fa-solid fa-user-tag me-1 text-muted"></i> Job Title (Optional)
+                </label>
                 <input type="text" name="job_title" class="form-control p-3" placeholder="e.g. Python Django Developer" value="{{ job_title|default:'' }}">
             </div>
             
             <!-- 2. Job Description Textarea -->
             <div class="mb-3">
-                <label class="form-label fw-bold">Paste Job Description *</label>
+                <label class="form-label fw-semibold text-dark">
+                    <i class="fa-solid fa-file-lines me-1 text-muted"></i> Paste Job Description *
+                </label>
                 <textarea name="job_description" class="form-control p-3" rows="6" placeholder="Paste full job description from LinkedIn, Indeed, etc..." required>{{ job_description|default:'' }}</textarea>
             </div>
 
             <!-- 3. Resume Dropdown -->
-            <div class="mb-3">
-                <label class="form-label fw-bold">Select Resume to Compare *</label>
-                <select name="selected_resume" class="form-select p-3" required>
-                    <option value="" disabled {% if not selected_resume_id %}selected{% endif %}>-- Choose a Resume --</option>
+            <div class="mb-4">
+                <label for="selected_resume" class="form-label fw-semibold text-dark">
+                    <i class="fa-solid fa-file-pdf me-1 text-muted"></i> Select Resume to Compare *
+                </label>
+                <select name="selected_resume" id="selected_resume" class="form-select p-3" required>
+                    <option value="" disabled {% if not selected_resume_id %}selected{% endif %}>
+                        -- Choose a Resume --
+                    </option>
                     {% for resume in user_resumes %}
                         <option value="{{ resume.id }}" {% if selected_resume_id == resume.id %}selected{% endif %}>
-                            {{ resume.file.name }} - {{ resume.uploaded_at|date:"d M Y, h:i A" }}
+                            {% if resume.title %}
+                                {{ resume.title }}
+                            {% elif resume.file %}
+                                {{ resume.file.name|slice:"8:" }}
+                            {% else %}
+                                Resume #{{ resume.id }}
+                            {% endif %}
+
+                            {% if resume.uploaded_at %}
+                                - {{ resume.uploaded_at|date:"d M Y, h:i A" }}
+                            {% elif resume.created_at %}
+                                - {{ resume.created_at|date:"d M Y, h:i A" }}
+                            {% endif %}
                         </option>
                     {% empty %}
                         <option value="" disabled>No resumes uploaded yet!</option>
@@ -41,36 +62,87 @@
             </div>
             
             <!-- Submit Button -->
-            <button type="submit" class="btn btn-primary px-4 py-3 fw-bold rounded-3">
+            <button type="submit" class="btn btn-primary w-100 w-md-auto px-4 py-3 fw-bold rounded-3" onclick="this.innerHTML='<i class=\'fa-solid fa-spinner fa-spin me-2\'></i> Analyzing...';">
                 <i class="fa-solid fa-wand-magic-sparkles me-2"></i> Analyze Match Score
             </button>
         </form>
     </div>
 
+    <!-- Analysis Result Card -->
     {% if analyzed %}
     <div class="card border-0 shadow-sm p-4 mb-4" style="border-radius: 12px; background-color: #ffffff;">
-        <h4 class="fw-bold mb-3 text-dark">Analysis Result</h4>
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h4 class="fw-bold text-dark mb-0">
+                <i class="fa-solid fa-chart-pie me-2 text-primary"></i>Analysis Result
+            </h4>
+            {% if job_title %}
+                <span class="badge bg-light text-dark border px-3 py-2 fs-6">
+                    Target: <strong>{{ job_title }}</strong>
+                </span>
+            {% endif %}
+        </div>
         
+        <!-- Score Progress Bar -->
         <div class="mb-4">
             <div class="d-flex justify-content-between align-items-center mb-2">
-                <span class="fw-bold fs-6">ATS Compatibility Score:</span>
-                <span class="badge bg-success fs-6 px-3 py-2">{{ match_score }}%</span>
+                <span class="fw-bold fs-6 text-secondary">ATS Compatibility Score:</span>
+                <span class="badge {% if match_score >= 70 %}bg-success{% elif match_score >= 40 %}bg-warning text-dark{% else %}bg-danger{% endif %} fs-5 px-3 py-2">
+                    {{ match_score }}%
+                </span>
             </div>
             <div class="progress" style="height: 18px; border-radius: 10px; background-color: #e9ecef;">
-                <div class="progress-bar bg-success progress-bar-striped progress-bar-animated" role="progressbar" style="width: {{ match_score }}%;" aria-valuenow="{{ match_score }}" aria-valuemin="0" aria-valuemax="100">
-                    {{ match_score }}%
+                <div class="progress-bar {% if match_score >= 70 %}bg-success{% elif match_score >= 40 %}bg-warning{% else %}bg-danger{% endif %} progress-bar-striped progress-bar-animated" 
+                     role="progressbar" 
+                     style="width: {{ match_score }}%;" 
+                     aria-valuenow="{{ match_score }}" 
+                     aria-valuemin="0" 
+                     aria-valuemax="100">
                 </div>
             </div>
         </div>
 
-        <div>
-            <h6 class="fw-bold text-secondary mb-3">Matching Keywords Found:</h6>
-            <div>
-                {% for word in matched_keywords %}
-                    <span class="badge bg-primary me-2 mb-2 px-3 py-2 fs-6">{{ word }}</span>
-                {% empty %}
-                    <p class="text-muted small">We couldn't find any keywords in your resume that match this job.</p>
-                {% endfor %}
+        <hr class="my-4" style="opacity: 0.1;">
+
+        <!-- Skills Breakdown Grid -->
+        <div class="row g-4">
+            <!-- Matched Skills Column -->
+            <div class="col-md-6">
+                <div class="p-3 rounded-3" style="background-color: #f8fdf9; border: 1px solid #d1e7dd;">
+                    <h6 class="fw-bold text-success mb-3">
+                        <i class="fa-solid fa-circle-check me-2"></i>Matched Skills Found:
+                    </h6>
+                    <div>
+                        {% for word in matched_keywords %}
+                            <span class="badge bg-success text-white me-2 mb-2 px-3 py-2 fs-6 rounded-pill shadow-sm">
+                                {{ word }}
+                            </span>
+                        {% empty %}
+                            <p class="text-muted small mb-0">No matching skills found in your resume for this job role.</p>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Missing Skills Column (വരുത്തിയ മാറ്റം ഇവിടെയാണ്) -->
+            <div class="col-md-6">
+                <div class="p-3 rounded-3" style="background-color: #fff8f8; border: 1px solid #f8d7da;">
+                    <h6 class="fw-bold text-danger mb-3">
+                        <i class="fa-solid fa-triangle-exclamation me-2"></i>Missing Skills (To Add):
+                    </h6>
+                    <div>
+                        {% for word in missing_keywords %}
+                            <span class="badge bg-danger text-white me-2 mb-2 px-3 py-2 fs-6 rounded-pill shadow-sm">
+                                {{ word }}
+                            </span>
+                        {% empty %}
+                            {% if matched_keywords %}
+                                <p class="text-success small mb-0 fw-semibold">Great job! You have all the required skills mentioned in the JD.</p>
+                            {% else %}
+                                <p class="text-muted small mb-0">No specific skills detected in the Job Description to match.</p>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
             </div>
         </div>
     </div>

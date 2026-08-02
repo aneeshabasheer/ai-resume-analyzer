@@ -1,3 +1,4 @@
+from .nlp_parser import extract_skills_with_spacy
 import json
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
@@ -117,7 +118,7 @@ def dashboard_view(request):
     
     user_analyses = ResumeAnalysis.objects.filter(resume__user=user)
     
-    jobs_matched = user_analyses.filter(score__gte=70).count()
+    jobs_matched = user_analyses.filter(score__gte=50).count()
     
     total_analyses_count = user_analyses.count()
     
@@ -137,8 +138,22 @@ def dashboard_view(request):
 
 @login_required
 def upload_view(request):
+    user_resumes = Resume.objects.filter(user=request.user).order_by('-id') 
+
     if request.method == 'POST':
         form = ResumeUploadForm(request.POST, request.FILES)
+        
+        # 1. Manual File Validation (PDF & Size check)
+        uploaded_file = request.FILES.get('file') 
+        if uploaded_file:
+            if not uploaded_file.name.lower().endswith(('.pdf', '.docx', '.doc')):
+                messages.error(request, "Only PDF or DOCX files are allowed!")
+                return render(request, 'upload.html', {'form': form, 'user_resumes': user_resumes, 'active_menu': 'upload'})
+            
+            if uploaded_file.size > 5 * 1024 * 1024:
+                messages.error(request, "File size exceeds 5MB limit!")
+                return render(request, 'upload.html', {'form': form, 'user_resumes': user_resumes, 'active_menu': 'upload'})
+
         if form.is_valid():
             resume = form.save(commit=False)
             resume.user = request.user
@@ -152,7 +167,6 @@ def upload_view(request):
                 resume.save()
                 
                 messages.success(request, "Resume uploaded and parsed successfully! Now match it with a Job Description.")
-                
                 return redirect('jobs')  
 
             except Exception as e:
@@ -165,9 +179,11 @@ def upload_view(request):
     else:
         form = ResumeUploadForm()
         
-    return render(request, 'upload.html', {'form': form, 'active_menu': 'upload'})
-
-
+    return render(request, 'upload.html', {
+        'form': form, 
+        'user_resumes': user_resumes, 
+        'active_menu': 'upload'
+    })
 # ==========================================
 # 3. RESULT VIEW & PDF REPORT DOWNLOAD
 # ==========================================
@@ -308,12 +324,23 @@ def history_view(request):
 @login_required
 def delete_analysis_view(request, analysis_id):
     analysis = get_object_or_404(ResumeAnalysis, id=analysis_id, resume__user=request.user)
-    resume = analysis.resume
     analysis.delete()
-    if resume and not ResumeAnalysis.objects.filter(resume=resume).exists():
-        resume.delete()
-    messages.success(request, "Deleted successfully!")
-    return redirect('dashboard') 
+    
+    messages.success(request, "Analysis record deleted successfully!")
+    return redirect('history') 
+
+
+# =============================================================================
+# 2. Delete Resume (Resume delete from upload page)
+# =============================================================================
+
+@login_required
+def delete_resume_view(request, resume_id):
+    resume = get_object_or_404(Resume, id=resume_id, user=request.user)
+    resume.delete()  
+    
+    messages.success(request, "Resume deleted successfully!")
+    return redirect('upload_resume')
 
 
 # ==============================================================
@@ -459,9 +486,49 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
 from .models import Resume, ResumeAnalysis
 
+import spacy
+from spacy.matcher import PhraseMatcher
+
+try:
+    nlp = spacy.load("en_core_web_sm")
+except Exception:
+    import spacy.cli
+    spacy.cli.download("en_core_web_sm")
+    nlp = spacy.load("en_core_web_sm")
+
+SKILL_DATABASE = [
+    "Python", "Django", "Flask", "React", "Node.js", "JavaScript", "JS",
+    "HTML", "HTML5", "CSS", "CSS3", "PostgreSQL", "MySQL", "SQL", "MongoDB", "AWS", 
+    "Docker", "Git", "GitHub", "REST API", "Communication", "Problem Solving", "Teamwork",
+    "C", "C++", "Java", "OOPs", "B.Tech", "M.Tech", "BCA", "MCA"
+]
+
+def extract_skills_spacy(text):
+    if not text or len(str(text).strip()) == 0:
+        return []
+        
+    doc = nlp(str(text))
+    matcher = PhraseMatcher(nlp.vocab, attr="LOWER") # Case-insensitive matching
+    
+    patterns = [nlp.make_doc(skill) for skill in SKILL_DATABASE]
+    matcher.add("SKILL_PATTERN", patterns)
+    
+    matches = matcher(doc)
+    extracted_skills = set()
+    
+    for match_id, start, end in matches:
+        span = doc[start:end]
+        matched_text = span.text.strip().lower()
+        for skill in SKILL_DATABASE:
+            if skill.lower() == matched_text:
+                extracted_skills.add(skill)
+                
+    return list(extracted_skills)
+
+
 @login_required
 def analyze_jd_view(request):
-    user_resumes = Resume.objects.filter(user=request.user)
+    user_resumes = Resume.objects.filter(user=request.user).order_by('-id')
 
     if request.method == 'POST':
         job_title = request.POST.get('job_title', '')
@@ -472,95 +539,69 @@ def analyze_jd_view(request):
         if selected_resume_id:
             user_resume = Resume.objects.filter(id=selected_resume_id, user=request.user).first()
         else:
-            user_resume = user_resumes.last()
+            user_resume = user_resumes.first() 
 
         if job_description and user_resume:
-            # 1. Targeted Skills Regex Patterns
-            TARGET_CATEGORIES = {
-                'Python': r'\bpython\b',
-                'Django': r'\bdjango\b',
-                'C': r'\bc\b',
-                'C++': r'c\+\+',
-                'Java': r'\bjava\b',
-                'JavaScript': r'\bjavascript\b|\bjs\b',
-                'HTML': r'\bhtml\b|\bhtml5\b',
-                'CSS': r'\bcss\b|\bcss3\b',
-                'React': r'\breact\b|\breactjs\b',
-                'SQL': r'\bsql\b|\bmysql\b|\bpostgresql\b',
-                'REST API': r'\brest\s*api\b|\bapi\b|\brestful\b',
-                'Git': r'\bgit\b|\bgithub\b|\bgitlab\b',
-                'AWS': r'\baws\b|\bcloud\b',
-                'OOPs': r'\boops\b|\bobject\s*oriented\b',
-                'B.Tech': r'\bb\.?tech\b|\bbachelor',
-                'M.Tech': r'\bm\.?tech\b|\bmaster',
-                'BCA': r'\bbca\b',
-                'MCA': r'\bmca\b',
-                'Communication': r'\bcommunication\b',
-                'Teamwork': r'\bteamwork\b|\bcollaboration\b',
-                'Problem Solving': r'\bproblem\s*solving\b'
-            }
-
-            # 2. Extract Text from Resume reliably
+            # 1. Improved Resume Text Extraction Logic
             resume_text = ""
-            if user_resume.raw_text and len(user_resume.raw_text.strip()) > 20:
-                resume_text = str(user_resume.raw_text).lower()
-            elif user_resume.file:
+            
+            if user_resume.file:
                 try:
-                    reader = PdfReader(user_resume.file.path)
+                    user_resume.file.open('rb')
+                    reader = PdfReader(user_resume.file)
+                    pdf_text = ""
                     for page in reader.pages:
                         extracted = page.extract_text()
                         if extracted:
-                            resume_text += " " + extracted
-                    resume_text = resume_text.lower()
+                            pdf_text += " " + extracted
+                    user_resume.file.close()
+                    
+                    if len(pdf_text.strip()) > 10:
+                        resume_text = pdf_text
                 except Exception as e:
                     print("PDF Reading Error:", e)
 
-            jd_text_lower = job_description.lower()
+            if not resume_text and user_resume.raw_text:
+                resume_text = str(user_resume.raw_text)
 
-            # 3. Categorize Skills Safely
-            extracted_skills = []  
-            matched_keywords = []  
-            missing_keywords = []  
-            jd_keywords_found = [] 
+            # --- DEBUG LOGS (VS Code Terminal-ൽ കാണാൻ) ---
+            print("\n==========================================")
+            print(f"SELECTED RESUME ID: {user_resume.id}")
+            print(f"RESUME TEXT LENGTH: {len(resume_text)}")
+            print(f"RESUME SAMPLE TEXT: {resume_text[:200]}...")
+            print("==========================================\n")
 
-            for display_name, pattern in TARGET_CATEGORIES.items():
-                in_resume = bool(resume_text and re.search(pattern, resume_text, re.IGNORECASE))
-                in_jd = bool(re.search(pattern, jd_text_lower, re.IGNORECASE))
+            # 2. Extract Skills using spaCy NLP
+            extracted_skills = extract_skills_spacy(resume_text)
+            jd_keywords_found = extract_skills_spacy(job_description)
 
-                if in_resume:
-                    extracted_skills.append(display_name)
+            print(f"EXTRACTED RESUME SKILLS: {extracted_skills}")
+            print(f"EXTRACTED JD SKILLS: {jd_keywords_found}")
 
-                if in_jd:
-                    jd_keywords_found.append(display_name)
-                    if in_resume:
-                        matched_keywords.append(display_name)
-                    else:
-                        missing_keywords.append(display_name)
+            # 3. Categorize Skills (Matched & Missing)
+            resume_skills_set = set(extracted_skills)
+            jd_skills_set = set(jd_keywords_found)
 
-            # 4. Fallback: Direct word/string check if regex misses
-            if not matched_keywords and resume_text:
-                for skill in jd_keywords_found:
-                    if skill.lower() in resume_text:
-                        matched_keywords.append(skill)
-                        if skill in missing_keywords:
-                            missing_keywords.remove(skill)
+            matched_keywords = list(resume_skills_set.intersection(jd_skills_set))
+            missing_keywords = list(jd_skills_set - resume_skills_set)
 
-            # 5. Dynamic Score Calculation
-            total_found = len(jd_keywords_found)
+            # 4. Dynamic Score Calculation
+            total_found = len(jd_skills_set)
             total_matched = len(matched_keywords)
 
             if total_found > 0:
                 calc_percentage = (total_matched / total_found) * 100
-                match_score = int(np.clip(calc_percentage, 15, 95)) if total_matched > 0 else 15
+                raw_score = int(calc_percentage) if total_matched > 0 else 15
+                match_score = max(15, min(raw_score, 95))
             else:
-                # Text similarity fallback if no specific keywords matched
-                jd_words = set(re.findall(r'\w{3,}', jd_text_lower))
-                resume_words = set(re.findall(r'\w{3,}', resume_text))
+                jd_words = set(re.findall(r'\w{3,}', job_description.lower()))
+                resume_words = set(re.findall(r'\w{3,}', resume_text.lower()))
                 common_words = jd_words.intersection(resume_words)
                 
                 if jd_words:
                     word_ratio = (len(common_words) / len(jd_words)) * 100
-                    match_score = int(np.clip(word_ratio * 1.5, 20, 85))
+                    raw_score = int(word_ratio * 1.5)
+                    match_score = max(20, min(raw_score, 85))
                 else:
                     match_score = 40
 
@@ -568,14 +609,14 @@ def analyze_jd_view(request):
             formatted_matched = list(set(matched_keywords))
             formatted_missing = list(set(missing_keywords))
 
-            # 6. Save Analysis to Database
+            # 5. Save Analysis to Database
             analysis = ResumeAnalysis.objects.create(
                 resume=user_resume,
                 job_title=job_title,
                 job_description=job_description,
                 score=match_score,
                 extracted_skills=formatted_extracted,
-                matched_skills=formatted_matched,    
+                matched_skills=formatted_matched,     
                 missing_skills=formatted_missing      
             )
 

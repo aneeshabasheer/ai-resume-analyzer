@@ -1,9 +1,10 @@
-from django.db import models
+import os
 from django import forms
+from django.db import models
 from django.contrib.auth.models import User
 from django.contrib.auth.forms import UserCreationForm
 from .models import UserProfile, Resume
-import os
+
 
 # 1. USER REGISTRATION FORM
 class UserRegisterForm(UserCreationForm):
@@ -12,7 +13,6 @@ class UserRegisterForm(UserCreationForm):
     class Meta(UserCreationForm.Meta):
         model = User
         fields = UserCreationForm.Meta.fields + ('email',)
-
 
 
 # 2. USER UPDATE FORM
@@ -28,18 +28,28 @@ class ProfileUpdateForm(forms.ModelForm):
         model = UserProfile
         fields = ['profile_pic', 'phone_number', 'bio', 'skills', 'education', 'experience']
         widgets = {
-            'bio': forms.Textarea(attrs={'rows': 3}),
-            'skills': forms.Textarea(attrs={'rows': 2, 'placeholder': 'e.g., Python, Django, HTML, CSS'}),
-            'education': forms.Textarea(attrs={'rows': 2, 'placeholder': 'e.g., BCA from ABC University (2024)'}),
-            'experience': forms.Textarea(attrs={'rows': 2, 'placeholder': 'e.g., Python Intern at XYZ Corp (6 months)'}),
+            'bio': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
+            'skills': forms.Textarea(attrs={'rows': 2, 'class': 'form-control', 'placeholder': 'e.g., Python, Django, HTML, CSS'}),
+            'education': forms.Textarea(attrs={'rows': 2, 'class': 'form-control', 'placeholder': 'e.g., BCA from ABC University (2024)'}),
+            'experience': forms.Textarea(attrs={'rows': 2, 'class': 'form-control', 'placeholder': 'e.g., Python Intern at XYZ Corp (6 months)'}),
         }
 
 
-# 4. RESUME UPLOAD FORM
 class ResumeUploadForm(forms.ModelForm):
     class Meta:
         model = Resume
-        fields = ['file']
+        fields = ['title', 'file']  
+        widgets = {
+            'title': forms.TextInput(attrs={
+                'class': 'form-control form-control-custom',
+                'placeholder': 'e.g., Python Full Stack Developer Resume',
+                'required': True
+            }),
+            'file': forms.FileInput(attrs={
+                'class': 'form-control form-control-custom',
+                'accept': '.pdf,.docx'
+            })
+        }
 
     def clean_file(self):
         file = self.cleaned_data.get('file')
@@ -53,4 +63,3 @@ class ResumeUploadForm(forms.ModelForm):
             if file.size > 5 * 1024 * 1024:
                 raise forms.ValidationError("File size is too large! Maximum file size allowed is 5MB.")
         return file
-
