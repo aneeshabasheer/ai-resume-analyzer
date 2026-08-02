@@ -507,16 +507,20 @@ def extract_skills_spacy(text):
     if not text or len(str(text).strip()) == 0:
         return []
         
-    text_str = str(text)
+    text_str = str(text).lower()
     extracted_skills = set()
     
+    # 1. Simple Flexible Search (Primary & Bulletproof)
     for skill in SKILL_DATABASE:
-        pattern = r'(?<!\w)' + re.escape(skill) + r'(?!\w)'
-        if re.search(pattern, text_str, re.IGNORECASE):
+        skill_lower = skill.lower()
+        # Word boundary pattern that catches special characters (C++, Node.js, etc.)
+        pattern = r'(?:^|[^\w])' + re.escape(skill_lower) + r'(?:[^\w]|$)'
+        if re.search(pattern, text_str):
             extracted_skills.add(skill)
 
+    # 2. SpaCy PhraseMatcher (Secondary)
     try:
-        doc = nlp(text_str)
+        doc = nlp(str(text))
         matcher = PhraseMatcher(nlp.vocab, attr="LOWER")
         patterns = [nlp.make_doc(skill) for skill in SKILL_DATABASE]
         matcher.add("SKILL_PATTERN", patterns)
@@ -529,7 +533,7 @@ def extract_skills_spacy(text):
                 if skill.lower() == matched_text:
                     extracted_skills.add(skill)
     except Exception as e:
-        print("SpaCy Matcher Error:", e)
+        print("SpaCy Matcher Log Error:", e)
 
     return list(extracted_skills)
 
@@ -550,37 +554,50 @@ def analyze_jd_view(request):
             user_resume = user_resumes.first() 
 
         if job_description and user_resume:
-            # 1. Resume Text Extraction Logic
             resume_text = ""
             
+            # 1. Ultra-Robust PDF Extraction Logic
             if user_resume.file:
                 try:
+                    # Method A: Direct File Read
                     user_resume.file.open('rb')
                     reader = PdfReader(user_resume.file)
-                    pdf_text = ""
+                    extracted_pages = []
                     for page in reader.pages:
-                        extracted = page.extract_text()
-                        if extracted:
-                            pdf_text += " " + extracted
+                        txt = page.extract_text()
+                        if txt:
+                            extracted_pages.append(txt)
+                    resume_text = " ".join(extracted_pages)
                     user_resume.file.close()
-                    
-                    if len(pdf_text.strip()) > 10:
-                        resume_text = pdf_text
                 except Exception as e:
-                    print("PDF Reading Error:", e)
+                    print("PDF Method A Failed:", e)
+                    
+                if not resume_text and hasattr(user_resume.file, 'path'):
+                    try:
+                        # Method B: Path Based Read
+                        reader = PdfReader(user_resume.file.path)
+                        resume_text = " ".join([p.extract_text() for p in reader.pages if p.extract_text()])
+                    except Exception as e:
+                        print("PDF Method B Failed:", e)
 
-            if not resume_text and user_resume.raw_text:
+            # Fallback to Database Raw Text if PDF extraction failed
+            if not resume_text.strip() and user_resume.raw_text:
                 resume_text = str(user_resume.raw_text)
 
             # --- DEBUG LOGS ---
             print("\n==========================================")
             print(f"SELECTED RESUME ID: {user_resume.id}")
-            print(f"RESUME TEXT LENGTH: {len(resume_text)}")
+            print(f"EXTRACTED TEXT LENGTH: {len(resume_text)}")
+            print(f"TEXT PREVIEW: {resume_text[:200]}")
             print("==========================================\n")
 
             # 2. Extract Skills
             extracted_skills = extract_skills_spacy(resume_text)
             jd_keywords_found = extract_skills_spacy(job_description)
+
+            # Debug extracted skills
+            print(f"RESUME SKILLS EXTRACTED: {extracted_skills}")
+            print(f"JD SKILLS EXTRACTED: {jd_keywords_found}")
 
             # 3. Case-Insensitive Skill Categorization Logic
             resume_skills_lower = [str(s).lower().strip() for s in extracted_skills]
@@ -609,17 +626,7 @@ def analyze_jd_view(request):
                 raw_score = int(calc_percentage)
                 match_score = max(15, min(raw_score, 95))
             else:
-                # Fallback matching if no specific keywords found in JD
-                jd_words = set(re.findall(r'\w{3,}', job_description.lower()))
-                resume_words = set(re.findall(r'\w{3,}', resume_text.lower()))
-                common_words = jd_words.intersection(resume_words)
-                
-                if jd_words:
-                    word_ratio = (len(common_words) / len(jd_words)) * 100
-                    raw_score = int(word_ratio * 1.5)
-                    match_score = max(20, min(raw_score, 85))
-                else:
-                    match_score = 40
+                match_score = 40
 
             # 5. Save Analysis to Database
             analysis = ResumeAnalysis.objects.create(
