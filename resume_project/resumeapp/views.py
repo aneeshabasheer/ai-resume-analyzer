@@ -376,6 +376,26 @@ def chatbot_view(request):
         'active_menu': 'chatbot'
     })
 
+# Clear chat history
+# =========================
+
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from .models import ChatHistory
+
+def clear_chat_history(request):
+
+    if request.method == 'POST' and request.user.is_authenticated:
+        try:  
+            ChatHistory.objects.filter(user=request.user).delete()
+            if 'chat_history' in request.session:
+                del request.session['chat_history']
+                
+            return JsonResponse({'status': 'success', 'message': 'Chat history cleared!'})
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+            
+    return JsonResponse({'status': 'invalid request'}, status=400)
 
 # ============================================
 # Profile View
@@ -392,8 +412,7 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 
 from .models import Resume, ResumeAnalysis, ChatHistory, UserProfile
-# ആവശ്യമായ Form-കൾ import ചെയ്യുക
-# from .forms import UserUpdateForm, ProfileUpdateForm
+from .forms import UserUpdateForm, ProfileUpdateForm
 
 import spacy
 from spacy.matcher import PhraseMatcher
