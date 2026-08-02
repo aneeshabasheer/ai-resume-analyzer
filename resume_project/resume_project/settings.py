@@ -159,7 +159,8 @@ import os
 CLOUDINARY_STORAGE = {
     'CLOUD_NAME': os.getenv('CLOUDINARY_CLOUD_NAME','enuhblpd'),
     'API_KEY': os.getenv('CLOUDINARY_API_KEY','853375556352862'),
-    'API_SECRET': os.getenv('CLOUDINARY_API_SECRET','5XHbS2Ap7-gRx2FviiXWuuYz2KY')
+    'API_SECRET': os.getenv('CLOUDINARY_API_SECRET','5XHbS2Ap7-gRx2FviiXWuuYz2KY'),
+    'RESOURCE_TYPE': 'raw',
 }
 
 DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'

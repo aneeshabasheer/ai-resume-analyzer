@@ -2,6 +2,7 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+from cloudinary.models import CloudinaryField
 
 # 1. USER PROFILE MODEL
 # Extends standard Django User model to store extra profile details.
@@ -34,9 +35,9 @@ def save_user_profile(sender, instance, **kwargs):
 # 2. RESUME MODEL
 # Stores uploaded resume metadata and extracted raw text.
 class Resume(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='resumes')
-    title = models.CharField(max_length=200, default="My Resume")
-    file = models.FileField(upload_to='resumes/')
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    title = models.CharField(max_length=255, blank=True, null=True)
+    file = CloudinaryField('raw', resource_type='raw')
     uploaded_at = models.DateTimeField(auto_now_add=True)
     raw_text = models.TextField(blank=True, null=True)
 
