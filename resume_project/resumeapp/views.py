@@ -542,7 +542,7 @@ def analyze_jd_view(request):
             user_resume = user_resumes.first() 
 
         if job_description and user_resume:
-            # 1. Improved Resume Text Extraction Logic
+            # 1. Resume Text Extraction
             resume_text = ""
             
             if user_resume.file:
@@ -564,36 +564,45 @@ def analyze_jd_view(request):
             if not resume_text and user_resume.raw_text:
                 resume_text = str(user_resume.raw_text)
 
-            # --- DEBUG LOGS (VS Code Terminal-ൽ കാണാൻ) ---
+            # --- DEBUG LOGS ---
             print("\n==========================================")
             print(f"SELECTED RESUME ID: {user_resume.id}")
             print(f"RESUME TEXT LENGTH: {len(resume_text)}")
-            print(f"RESUME SAMPLE TEXT: {resume_text[:200]}...")
             print("==========================================\n")
 
             # 2. Extract Skills using spaCy NLP
             extracted_skills = extract_skills_spacy(resume_text)
             jd_keywords_found = extract_skills_spacy(job_description)
 
-            print(f"EXTRACTED RESUME SKILLS: {extracted_skills}")
-            print(f"EXTRACTED JD SKILLS: {jd_keywords_found}")
+            # 3. FIX: Case-Insensitive Matching Logic
+            resume_skills_lower = [str(s).lower().strip() for s in extracted_skills]
 
-            # 3. Categorize Skills (Matched & Missing)
-            resume_skills_set = set(extracted_skills)
-            jd_skills_set = set(jd_keywords_found)
+            matched_keywords = []
+            missing_keywords = []
 
-            matched_keywords = list(resume_skills_set.intersection(jd_skills_set))
-            missing_keywords = list(jd_skills_set - resume_skills_set)
+            for jd_skill in jd_keywords_found:
+                clean_skill = str(jd_skill).strip()
+                if clean_skill.lower() in resume_skills_lower:
+                    matched_keywords.append(clean_skill)
+                else:
+                    missing_keywords.append(clean_skill)
+
+            # Deduplicate & Format
+            formatted_extracted = list(set([str(s).strip() for s in extracted_skills]))
+            formatted_matched = list(set(matched_keywords))
+            formatted_missing = list(set(missing_keywords))
 
             # 4. Dynamic Score Calculation
-            total_found = len(jd_skills_set)
-            total_matched = len(matched_keywords)
+            total_found = len(set([str(s).lower().strip() for s in jd_keywords_found]))
+            total_matched = len(formatted_matched)
 
             if total_found > 0:
                 calc_percentage = (total_matched / total_found) * 100
-                raw_score = int(calc_percentage) if total_matched > 0 else 15
+                raw_score = int(calc_percentage)
+                # Minimum score 15, Maximum 95
                 match_score = max(15, min(raw_score, 95))
             else:
+                # Fallback matching using words if no spaCy skills found in JD
                 jd_words = set(re.findall(r'\w{3,}', job_description.lower()))
                 resume_words = set(re.findall(r'\w{3,}', resume_text.lower()))
                 common_words = jd_words.intersection(resume_words)
@@ -604,10 +613,6 @@ def analyze_jd_view(request):
                     match_score = max(20, min(raw_score, 85))
                 else:
                     match_score = 40
-
-            formatted_extracted = list(set(extracted_skills))
-            formatted_matched = list(set(matched_keywords))
-            formatted_missing = list(set(missing_keywords))
 
             # 5. Save Analysis to Database
             analysis = ResumeAnalysis.objects.create(
