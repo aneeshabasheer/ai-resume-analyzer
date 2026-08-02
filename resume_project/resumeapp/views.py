@@ -376,8 +376,84 @@ def chatbot_view(request):
         'active_menu': 'chatbot'
     })
 
-# Clear chat history
-# =========================
+
+
+# ============================================
+# Profile View
+# ============================================
+
+from django.db.models import Avg
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import render, redirect
+from django.contrib import messages
+
+@login_required
+def profile_view(request):
+    """
+    Displays and edits user profile details.
+    """
+    user = request.user
+    profile, created = UserProfile.objects.get_or_create(user=user)
+    
+    if request.method == 'POST':
+        user_form = UserUpdateForm(request.POST, instance=user)
+        profile_form = ProfileUpdateForm(request.POST, request.FILES, instance=profile)
+        
+        if user_form.is_valid() and profile_form.is_valid():
+            user_form.save()
+            profile_form.save()
+            messages.success(request, "Your profile has been updated successfully!")
+            return redirect('profile')
+        else:
+            messages.error(request, "Please correct the errors in the form.")
+    else:
+        user_form = UserUpdateForm(instance=user)
+        profile_form = ProfileUpdateForm(instance=profile)
+        
+    total_uploaded = Resume.objects.filter(user=user).count()
+    
+    
+    avg_score_query = ResumeAnalysis.objects.filter(resume__user=user).aggregate(Avg('score'))
+    avg_score = int(avg_score_query['score__avg']) if avg_score_query['score__avg'] is not None else 0
+    
+    context = {
+        'user_form': user_form,
+        'profile_form': profile_form,
+        'total_uploaded': total_uploaded,  # In HTML {{ total_uploaded }}
+        'avg_score': avg_score,            # In HTML {{ avg_score }}%
+        'active_menu': 'profile'
+    }
+    return render(request, 'profile.html', context)
+
+# ============================================================
+# Delete user profile account
+# ============================================================
+
+from django.contrib.auth import logout
+
+@login_required
+def delete_account_view(request):
+    """
+    Allows a logged-in user to permanently delete their account and associated data.
+    """
+    if request.method == 'POST':
+        user = request.user
+        ResumeAnalysis.objects.filter(resume__user=user).delete()
+        Resume.objects.filter(user=user).delete()
+        user.delete()
+        logout(request)
+        
+        messages.success(request, "Your account has been deleted successfully.")
+        return redirect('login')  
+
+    return redirect('profile')
+
+
+
+# ==========================================
+# 5.  clear_chat_history
+# ==========================================
+
 
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -397,9 +473,10 @@ def clear_chat_history(request):
             
     return JsonResponse({'status': 'invalid request'}, status=400)
 
-# ============================================
-# Profile View
-# ============================================
+
+# ===============================================================
+
+
 
 import re
 from pypdf import PdfReader
