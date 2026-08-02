@@ -507,22 +507,30 @@ def extract_skills_spacy(text):
     if not text or len(str(text).strip()) == 0:
         return []
         
-    doc = nlp(str(text))
-    matcher = PhraseMatcher(nlp.vocab, attr="LOWER") # Case-insensitive matching
-    
-    patterns = [nlp.make_doc(skill) for skill in SKILL_DATABASE]
-    matcher.add("SKILL_PATTERN", patterns)
-    
-    matches = matcher(doc)
+    text_str = str(text)
     extracted_skills = set()
     
-    for match_id, start, end in matches:
-        span = doc[start:end]
-        matched_text = span.text.strip().lower()
-        for skill in SKILL_DATABASE:
-            if skill.lower() == matched_text:
-                extracted_skills.add(skill)
-                
+    for skill in SKILL_DATABASE:
+        pattern = r'(?<!\w)' + re.escape(skill) + r'(?!\w)'
+        if re.search(pattern, text_str, re.IGNORECASE):
+            extracted_skills.add(skill)
+
+    try:
+        doc = nlp(text_str)
+        matcher = PhraseMatcher(nlp.vocab, attr="LOWER")
+        patterns = [nlp.make_doc(skill) for skill in SKILL_DATABASE]
+        matcher.add("SKILL_PATTERN", patterns)
+        
+        matches = matcher(doc)
+        for match_id, start, end in matches:
+            span = doc[start:end]
+            matched_text = span.text.strip().lower()
+            for skill in SKILL_DATABASE:
+                if skill.lower() == matched_text:
+                    extracted_skills.add(skill)
+    except Exception as e:
+        print("SpaCy Matcher Error:", e)
+
     return list(extracted_skills)
 
 
@@ -542,7 +550,7 @@ def analyze_jd_view(request):
             user_resume = user_resumes.first() 
 
         if job_description and user_resume:
-            # 1. Resume Text Extraction
+            # 1. Resume Text Extraction Logic
             resume_text = ""
             
             if user_resume.file:
@@ -570,11 +578,11 @@ def analyze_jd_view(request):
             print(f"RESUME TEXT LENGTH: {len(resume_text)}")
             print("==========================================\n")
 
-            # 2. Extract Skills using spaCy NLP
+            # 2. Extract Skills
             extracted_skills = extract_skills_spacy(resume_text)
             jd_keywords_found = extract_skills_spacy(job_description)
 
-            # 3. FIX: Case-Insensitive Matching Logic
+            # 3. Case-Insensitive Skill Categorization Logic
             resume_skills_lower = [str(s).lower().strip() for s in extracted_skills]
 
             matched_keywords = []
@@ -599,10 +607,9 @@ def analyze_jd_view(request):
             if total_found > 0:
                 calc_percentage = (total_matched / total_found) * 100
                 raw_score = int(calc_percentage)
-                # Minimum score 15, Maximum 95
                 match_score = max(15, min(raw_score, 95))
             else:
-                # Fallback matching using words if no spaCy skills found in JD
+                # Fallback matching if no specific keywords found in JD
                 jd_words = set(re.findall(r'\w{3,}', job_description.lower()))
                 resume_words = set(re.findall(r'\w{3,}', resume_text.lower()))
                 common_words = jd_words.intersection(resume_words)
