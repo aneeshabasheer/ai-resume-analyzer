@@ -502,10 +502,24 @@ except Exception:
     nlp = spacy.load("en_core_web_sm")
 
 SKILL_DATABASE = [
-    "Python", "Django", "Flask", "React", "Node.js", "JavaScript", "JS",
-    "HTML", "HTML5", "CSS", "CSS3", "PostgreSQL", "MySQL", "SQL", "MongoDB", "AWS", 
-    "Docker", "Git", "GitHub", "REST API", "Communication", "Problem Solving", "Teamwork",
-    "C", "C++", "Java", "OOPs", "B.Tech", "M.Tech", "BCA", "MCA"
+    # Programming Languages
+    "Python", "Java", "C", "C++", "JavaScript", "JS", "TypeScript", "R", "PHP",
+    
+    # Data Science & Analytics
+    "SQL", "MySQL", "PostgreSQL", "MongoDB", "Power BI", "PowerBI", "Tableau", 
+    "Excel", "Advanced Excel", "Pandas", "NumPy", "Matplotlib", "Seaborn", 
+    "Data Analysis", "Data Analytics", "Statistics", "Machine Learning", "Deep Learning",
+    
+    # Web & Frameworks
+    "Django", "Flask", "React", "React.js", "Node.js", "HTML", "HTML5", "CSS", "CSS3", 
+    "Bootstrap", "Tailwind", "REST API", "GraphQL",
+    
+    # Cloud & Tools
+    "AWS", "Docker", "Git", "GitHub", "Linux", "Jira",
+    
+    # Soft Skills & Education
+    "Communication", "Problem Solving", "Teamwork", "Analytical Skills", 
+    "B.Tech", "M.Tech", "BCA", "MCA", "B.Sc", "M.Sc"
 ]
 
 # def extract_skills_spacy(text):
@@ -573,7 +587,7 @@ def extract_skills_spacy(text):
                 if skill.lower() == matched_str:
                     extracted_skills.add(skill)
     except Exception as e:
-        print("SpaCy Matcher Error:", e)
+        print("SpaCy Matcher Log Error:", e)
 
     return list(extracted_skills)
 
@@ -670,7 +684,6 @@ def analyze_jd_view(request):
                 missing_skills=formatted_missing      
             )
 
-            # HTML-ൽ Context Keys ശരിയായി ലഭിക്കാൻ രണ്ടും അയയ്ക്കുന്നു
             context = {
                 'analyzed': True,
                 'user_resumes': user_resumes,
