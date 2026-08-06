@@ -1,11 +1,12 @@
-from groq import Groq
-
 import os
+from groq import Groq
+from dotenv import load_dotenv
 
-GROQ_API_KEY = "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"
+load_dotenv()
+client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 
 
-client = Groq(api_key=GROQ_API_KEY)
+# client = Groq(api_key=GROQ_API_KEY)
 
 def get_chatbot_response(user_message):
     try:

@@ -347,6 +347,35 @@ def delete_resume_view(request, resume_id):
 # Chatbot view
 # ==============================================================
 
+# import os
+# from groq import Groq
+
+# def get_chatbot_response(user_message):
+#     try:
+#         client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
+
+        
+#         chat_completion = client.chat.completions.create(
+#             messages=[
+#                 {
+#                     "role": "system",
+#                     "content": "You are a helpful career advisor and resume expert."
+#                 },
+#                 {
+#                     "role": "user",
+#                     "content": user_message,
+#                 }
+#             ],
+#             model="llama-3.3-70b-versatile",
+#         )
+        
+#         return chat_completion.choices[0].message.content
+
+#     except Exception as e:
+#         print(f"Chatbot Error: {e}")
+#         return "Sorry, I am facing a temporary issue. Please try again."
+
+    
 @login_required
 def chatbot_view(request):
     """
