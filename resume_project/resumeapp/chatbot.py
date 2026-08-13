@@ -24,7 +24,7 @@ def get_chatbot_response(user_message):
             ],
         )
         ai_reply = response.choices[0].message.content
-        return ai_reply.replace("\n", "<br>")
+        return ai_reply 
 
     except Exception as e:
         print(f"Groq API Error: {e}")
