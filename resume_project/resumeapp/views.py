@@ -548,7 +548,7 @@ SKILL_DATABASE = [
     
     # Soft Skills & Education
     "Communication", "Problem Solving", "Teamwork", "Analytical Skills", 
-    "B.Tech", "M.Tech", "BCA", "MCA", "B.Sc", "M.Sc"
+    "B.Tech", "M.Tech", "BCA", "MCA", "B.Sc", "M.Sc", "Masters in Computer Applications","Bachelor in Computer Applications",
 ]
 
 # def extract_skills_spacy(text):
