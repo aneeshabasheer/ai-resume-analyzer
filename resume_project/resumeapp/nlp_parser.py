@@ -13,7 +13,7 @@ SKILL_DATABASE = [
     "Python", "Django", "Flask", "React", "Node.js", "JavaScript", "JS",
     "HTML", "HTML5", "CSS", "CSS3", "PostgreSQL", "MySQL", "SQL", "MongoDB", "AWS", 
     "Docker", "Git", "GitHub", "REST API", "Communication", "Problem Solving", "Teamwork",
-    "C", "C++", "Java", "OOPs", "B.Tech", "M.Tech", "BCA", "MCA"
+    "C", "C++", "Java", "OOPs", "B.Tech", "M.Tech", "BCA", "MCA",
 ]
 
 def extract_skills_with_spacy(text):
